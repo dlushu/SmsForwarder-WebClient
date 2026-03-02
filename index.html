@@ -495,6 +495,112 @@
             gap: 15px;
         }
         
+        /* 账号记录卡片样式 */
+        .account-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e8f4f8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .account-card:hover {
+            border-color: #4299e1;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .account-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .account-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4299e1 0%, #38b2ac 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .account-name {
+            flex: 1;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 15px;
+        }
+
+        .account-url {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .account-delete {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fdf2f8;
+            color: #e53e3e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .account-card:hover .account-delete {
+            opacity: 1;
+        }
+
+        .account-delete:hover {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .no-accounts {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .manual-login-btn {
+            font-size: 12px;
+            color: #4299e1;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .manual-login-btn:hover {
+            text-decoration: underline;
+        }
+
         /* 加载更多样式 */
         .load-more {
             text-align: center;
@@ -536,14 +642,35 @@
             .main-container {
                 width: 95%;
             }
-            
+
             .content {
                 padding: 18px;
             }
-            
-            .radio-group {
-                flex-direction: column;
+
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr) !important;
                 gap: 8px;
+            }
+
+            .grid-item {
+                padding: 12px 8px;
+            }
+
+            .grid-item i {
+                font-size: 20px;
+                margin-bottom: 6px;
+            }
+
+            .grid-item span {
+                font-size: 11px;
+            }
+
+            .radio-group {
+                gap: 8px;
+            }
+
+            .radio-option {
+                padding: 8px;
             }
         }
         
@@ -604,7 +731,16 @@
             <div class="login-status status-disconnected" id="loginStatus">
                 <i class="fas fa-plug"></i> 未登录
             </div>
-            
+
+            <!-- 账号记录列表 -->
+            <div id="accountList" style="display: none;">
+                <div class="section-title">
+                    <span>已保存的账号</span>
+                    <span class="manual-login-btn" onclick="showManualLogin()">手动登录</span>
+                </div>
+                <div id="savedAccounts"></div>
+            </div>
+
             <!-- 登录表单 -->
             <form id="loginForm">
                 <div class="form-group">
@@ -616,6 +752,7 @@
                     <input type="password" id="key" name="key" class="form-control" required>
                 </div>
                 <button type="button" id="loginButton" class="btn btn-primary" onclick="login()">登录</button>
+                <button type="button" class="btn" style="margin-top: 10px; background: #f8f8f8; color: #718096; font-size: 14px;" onclick="cancelManualLogin()" id="cancelLoginBtn" style="display: none;">取消</button>
             </form>
             
             <!-- 功能区域 -->
@@ -646,14 +783,120 @@
         </div>
     </div>
     <script>
-        let loginData = null; 
+        let loginData = null;
         let currentPage = 1;
         let hasMoreData = true;
         let isLoading = false;
         let currentEndpoint = '';
-        let allResults = []; 
-        let queryParams = {}; 
-        
+        let allResults = [];
+        let queryParams = {};
+        let savedAccounts = [];
+
+        // 页面加载时初始化
+        window.onload = function() {
+            loadSavedAccounts();
+            renderAccountList();
+        };
+
+        // 加载保存的账号
+        function loadSavedAccounts() {
+            const accounts = localStorage.getItem('sms_accounts');
+            if (accounts) {
+                savedAccounts = JSON.parse(accounts);
+            }
+        }
+
+        // 保存账号
+        function saveAccount(url, key) {
+            const newAccount = {
+                id: Date.now(),
+                url: url,
+                key: key,
+                name: '设备',
+                createdAt: new Date().toISOString()
+            };
+
+            // 检查是否已存在相同的账号
+            const existingIndex = savedAccounts.findIndex(acc => acc.url === url && acc.key === key);
+            if (existingIndex >= 0) {
+                savedAccounts[existingIndex] = newAccount;
+            } else {
+                savedAccounts.push(newAccount);
+            }
+
+            localStorage.setItem('sms_accounts', JSON.stringify(savedAccounts));
+            renderAccountList();
+        }
+
+        // 删除账号
+        function deleteAccount(id, event) {
+            event.stopPropagation();
+            if (confirm('确定要删除这个账号吗？')) {
+                savedAccounts = savedAccounts.filter(acc => acc.id !== id);
+                localStorage.setItem('sms_accounts', JSON.stringify(savedAccounts));
+                renderAccountList();
+            }
+        }
+
+        // 使用保存的账号登录
+        function loginWithAccount(id) {
+            const account = savedAccounts.find(acc => acc.id === id);
+            if (account) {
+                document.getElementById('url').value = account.url;
+                document.getElementById('key').value = account.key;
+                login();
+            }
+        }
+
+        // 渲染账号列表
+        function renderAccountList() {
+            const accountList = document.getElementById('savedAccounts');
+            const accountListSection = document.getElementById('accountList');
+
+            if (savedAccounts.length === 0) {
+                accountListSection.style.display = 'none';
+                showManualLogin();
+                return;
+            }
+
+            accountListSection.style.display = 'block';
+            accountList.innerHTML = savedAccounts.map(account => `
+                <div class="account-card" onclick="loginWithAccount(${account.id})">
+                    <div class="account-delete" onclick="deleteAccount(${account.id}, event)">
+                        <i class="fas fa-times"></i>
+                    </div>
+                    <div class="account-header">
+                        <div class="account-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="account-name">${escapeHtml(account.name)}</div>
+                    </div>
+                    <div class="account-url">${escapeHtml(account.url)}</div>
+                </div>
+            `).join('');
+
+            // 隐藏登录表单
+            document.getElementById('loginForm').style.display = 'none';
+        }
+
+        // 显示手动登录表单
+        function showManualLogin() {
+            document.getElementById('accountList').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('url').value = '';
+            document.getElementById('key').value = '';
+        }
+
+        // 取消手动登录
+        function cancelManualLogin() {
+            if (savedAccounts.length > 0) {
+                renderAccountList();
+            } else {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('accountList').style.display = 'none';
+            }
+        }
+
         // 登录函数
         async function login() {
             const loginForm = document.getElementById('loginForm');
@@ -688,9 +931,25 @@
                 
                 if (responseData.code === 200) {
                     loginData = responseData.data;
+
+                    // 更新账号名称
+                    if (loginData.extra_device_mark) {
+                        const currentUrl = document.getElementById('url').value;
+                        const currentKey = document.getElementById('key').value;
+                        const accountIndex = savedAccounts.findIndex(acc => acc.url === currentUrl && acc.key === currentKey);
+                        if (accountIndex >= 0) {
+                            savedAccounts[accountIndex].name = loginData.extra_device_mark;
+                            localStorage.setItem('sms_accounts', JSON.stringify(savedAccounts));
+                        }
+                    }
+
+                    // 保存登录成功的账号
+                    saveAccount(url, key);
+
                     loginStatus.className = 'login-status status-connected';
                     loginStatus.innerHTML = `<i class="fas fa-check-circle"></i> 已登录: ${loginData.extra_device_mark || '设备'}`;
                     document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('accountList').style.display = 'none';
                     document.getElementById('functionArea').style.display = 'block';
                     populateEndpointGrid();
                 } else {
@@ -734,13 +993,22 @@
                     gridItem.addEventListener('click', () => {
                         selectGridItem(gridItem);
                         updateFormFields(endpoint.value);
+                        // 自动查询功能：点击查询类功能时自动发送请求
+                        const autoQueryEndpoints = ['/sms/query', '/call/query', '/battery/query', '/location/query', '/contact/query', '/config/query'];
+                        if (autoQueryEndpoints.includes(endpoint.value)) {
+                            setTimeout(() => sendRequest(true), 100);
+                        }
                     });
                     endpointGrid.appendChild(gridItem);
-                    
+
                     // 默认选中第一个
                     if (endpointGrid.children.length === 1) {
                         selectGridItem(gridItem);
                         updateFormFields(endpoint.value);
+                        // 如果第一个是查询功能，自动查询
+                        if (['/sms/query', '/call/query', '/battery/query', '/location/query', '/contact/query', '/config/query'].includes(endpoint.value)) {
+                            setTimeout(() => sendRequest(true), 100);
+                        }
                     }
                 }
             });
@@ -759,21 +1027,94 @@
         function updateFormFields(endpoint) {
             const dynamicFields = document.getElementById('dynamicFields');
             dynamicFields.innerHTML = '';
-            const fields = getFieldsForEndpoint(endpoint);
-            
-            fields.forEach(field => {
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
-                createField(formGroup, field);
-                dynamicFields.appendChild(formGroup);
-            });
-            
+
+            // 重置所有状态
             currentPage = 1;
             hasMoreData = true;
             isLoading = false;
             allResults = [];
             queryParams = {};
-            document.getElementById('loadMore').style.display = 'none';
+
+            // 隐藏加载更多按钮
+            const loadMoreElement = document.getElementById('loadMore');
+            if (loadMoreElement) {
+                loadMoreElement.style.display = 'none';
+                loadMoreElement.classList.remove('loading', 'end');
+            }
+
+            // 对于查询短信和查询通话，单选按钮直接显示，其他输入框一起折叠
+            const isCollapsibleEndpoint = ['/sms/query', '/call/query'].includes(endpoint);
+
+            if (isCollapsibleEndpoint) {
+                const fields = getFieldsForEndpoint(endpoint);
+
+                // 单选按钮直接显示
+                fields.forEach(field => {
+                    if (field.type === 'radio') {
+                        const formGroup = document.createElement('div');
+                        formGroup.className = 'form-group';
+                        createField(formGroup, field);
+                        dynamicFields.appendChild(formGroup);
+                    }
+                });
+
+                // 收集其他需要折叠的输入框
+                const collapsibleFields = fields.filter(field => field.type !== 'radio');
+                if (collapsibleFields.length > 0) {
+                    // 创建折叠容器
+                    const collapseContainer = document.createElement('div');
+                    collapseContainer.style.marginTop = '20px';
+                    collapseContainer.style.marginBottom = '20px';
+
+                    // 创建折叠头部
+                    const collapseHeader = document.createElement('div');
+                    collapseHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f8f8; border-radius: 8px; cursor: pointer;';
+                    collapseHeader.innerHTML = `
+                        <span style="font-size: 14px; font-weight: 600; color: #4a5568;">更多参数</span>
+                        <i class="fas fa-chevron-down" style="color: #718096; transition: transform 0.3s ease;"></i>
+                    `;
+
+                    // 创建折叠内容区域
+                    const collapseContent = document.createElement('div');
+                    collapseContent.style.cssText = 'overflow: hidden; max-height: 0; transition: max-height 0.3s ease; padding-top: 12px;';
+
+                    collapsibleFields.forEach(field => {
+                        const formGroup = document.createElement('div');
+                        formGroup.className = 'form-group';
+                        formGroup.style.marginBottom = '20px';
+                        if (collapsibleFields.indexOf(field) === collapsibleFields.length - 1) {
+                            formGroup.style.marginBottom = '0';
+                        }
+                        createField(formGroup, field);
+                        collapseContent.appendChild(formGroup);
+                    });
+
+                    // 添加点击事件
+                    collapseHeader.addEventListener('click', () => {
+                        const isCollapsed = collapseContent.style.maxHeight === '0px';
+                        if (isCollapsed) {
+                            collapseContent.style.maxHeight = collapseContent.scrollHeight + 'px';
+                            collapseHeader.querySelector('i').style.transform = 'rotate(180deg)';
+                        } else {
+                            collapseContent.style.maxHeight = '0px';
+                            collapseHeader.querySelector('i').style.transform = 'rotate(0deg)';
+                        }
+                    });
+
+                    collapseContainer.appendChild(collapseHeader);
+                    collapseContainer.appendChild(collapseContent);
+                    dynamicFields.appendChild(collapseContainer);
+                }
+            } else {
+                // 其他功能正常显示表单
+                const fields = getFieldsForEndpoint(endpoint);
+                fields.forEach(field => {
+                    const formGroup = document.createElement('div');
+                    formGroup.className = 'form-group';
+                    createField(formGroup, field);
+                    dynamicFields.appendChild(formGroup);
+                });
+            }
         }
         
         // 获取功能对应的表单字段
@@ -886,21 +1227,42 @@
         async function sendRequest(reset = true) {
             const form = document.getElementById('apiForm');
             const sendButton = document.getElementById('sendButton');
-            
+
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
-            
+
             if (reset) {
                 currentPage = 1;
                 hasMoreData = true;
                 allResults = [];
+                queryParams = {};
+                isLoading = false;
+
+                const responseElement = document.getElementById('response');
+                const loadMoreElement = document.getElementById('loadMore');
+
+                // 先把加载更多按钮移出response容器
+                if (loadMoreElement && responseElement.contains(loadMoreElement)) {
+                    loadMoreElement.remove();
+                    // 临时放到body
+                    document.body.appendChild(loadMoreElement);
+                }
+
                 document.getElementById('response').innerHTML = '';
+
+                // 清空按钮状态
+                if (loadMoreElement) {
+                    loadMoreElement.style.display = 'none';
+                    loadMoreElement.classList.remove('loading', 'end');
+                }
             }
-            
-            if (isLoading || !hasMoreData) return;
-            
+
+            // 对于非分页查询，不检查hasMoreData
+            const isPaginationQuery = ['/sms/query', '/call/query'].includes(currentEndpoint);
+            if (isLoading || (isPaginationQuery && !hasMoreData)) return;
+
             const url = document.getElementById('url').value;
             const key = document.getElementById('key').value;
             const endpoint = currentEndpoint;
@@ -933,11 +1295,16 @@
             
             const loadMoreElement = document.getElementById('loadMore');
             const loadMoreText = document.getElementById('loadMoreText');
+            const responseElement = document.getElementById('response');
             if (['/sms/query', '/call/query'].includes(endpoint)) {
                 loadMoreElement.style.display = 'block';
                 loadMoreText.innerText = '加载中...';
                 loadMoreElement.classList.add('loading');
                 isLoading = true;
+                // 确保加载更多按钮在response容器内
+                if (!responseElement.contains(loadMoreElement)) {
+                    responseElement.appendChild(loadMoreElement);
+                }
             }
             
             try {
@@ -999,61 +1366,75 @@
                     responseElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">没有找到短信记录</div>';
                     return;
                 }
-                
-                const html = data.map(item => {
+
+                // 获取加载更多按钮（可能在body中）
+                const loadMoreElement = document.getElementById('loadMore');
+
+                const html = data.map((item, index) => {
                     const date = new Date(item.date).toLocaleString();
                     let simInfo = '未知卡槽';
                     if (item.sim_id === 0) simInfo = 'SIM卡1';
                     else if (item.sim_id === 1) simInfo = 'SIM卡2';
-                    
+
                     return `
-                        <div class="record-card">
-                            <div class="record-header">
-                                <span class="record-sim">${simInfo}</span>
+                        <div style="padding: 16px; ${index > 0 ? 'border-top: 1px solid #e2e8f0;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <span style="background: #e8f4f8; color: #4299e1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${simInfo}</span>
                                 <span style="color: #718096; font-size: 12px;">${date}</span>
                             </div>
-                            <div class="record-content">${escapeHtml(item.content)}</div>
-                            <div class="record-meta">
+                            <div style="color: #2d3748; font-size: 15px; line-height: 1.5; margin-bottom: 10px;">${escapeHtml(item.content)}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #718096;">
                                 <span>${escapeHtml(item.name || '未知联系人')} ${escapeHtml(item.number)}</span>
-                                <span class="record-action" onclick="replySMS('${escapeHtml(item.number)}')">回复</span>
+                                <span style="color: #4299e1; font-weight: 600; cursor: pointer;" onclick="replySMS('${escapeHtml(item.number)}')">回复</span>
                             </div>
                         </div>
                     `;
                 }).join('');
                 responseElement.innerHTML = html;
+                // 重新添加加载更多按钮（从body中移过来）
+                if (loadMoreElement) {
+                    responseElement.appendChild(loadMoreElement);
+                }
                 return;
             }
-            
+
             // 通话查询结果
             if (endpoint === '/call/query') {
                 if (data.length === 0) {
                     responseElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">没有找到通话记录</div>';
                     return;
                 }
-                
-                const html = data.map(item => {
+
+                // 获取加载更多按钮（可能在body中）
+                const loadMoreElement = document.getElementById('loadMore');
+
+                const html = data.map((item, index) => {
                     const date = new Date(item.dateLong).toLocaleString();
                     const duration = `${Math.floor(item.duration / 60)}分${item.duration % 60}秒`;
                     let typeText = item.type === 1 ? '呼入' : item.type === 2 ? '呼出' : '未接';
                     let typeColor = item.type === 1 ? '#48bb78' : item.type === 2 ? '#4299e1' : '#e53e3e';
-                    
+
                     return `
-                        <div class="record-card">
-                            <div class="record-header">
+                        <div style="padding: 16px; ${index > 0 ? 'border-top: 1px solid #e2e8f0;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                                 <span style="color: ${typeColor}; font-size: 12px; font-weight: 600;">${typeText}</span>
                                 <span style="color: #718096; font-size: 12px;">${date}</span>
                             </div>
-                            <div class="record-content">${escapeHtml(item.name || '未知联系人')} ${escapeHtml(item.number)}</div>
-                            <div class="record-meta">
-                                <span>通话时长: ${duration}</span>
+                            <div style="color: #2d3748; font-size: 15px; line-height: 1.5; margin-bottom: 10px;">${escapeHtml(item.name || '未知联系人')} ${escapeHtml(item.number)}</div>
+                            <div style="font-size: 12px; color: #718096;">
+                                通话时长: ${duration}
                             </div>
                         </div>
                     `;
                 }).join('');
                 responseElement.innerHTML = html;
+                // 重新添加加载更多按钮（从body中移过来）
+                if (loadMoreElement) {
+                    responseElement.appendChild(loadMoreElement);
+                }
                 return;
             }
-            
+
             // 配置查询结果
             if (endpoint === '/config/query') {
                 const allFeatures = [
@@ -1066,44 +1447,38 @@
                     { key: 'enable_api_contact_query', label: '查询话簿', icon: 'fas fa-address-book' },
                     { key: 'enable_api_location', label: '查询定位', icon: 'fas fa-map-marker-alt' }
                 ];
-                
+
                 const html = `
-                    <div class="config-card">
-                        <div class="config-header">
-                            <h3 style="margin: 0 0 15px 0; color: #2d3748;">设备配置信息</h3>
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                                <span style="background: #e8f4f8; color: #4299e1; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                                    ${data.extra_device_mark || '未知设备'}
-                                </span>
-                            </div>
+                    <div style="padding: 16px;">
+                        <h3 style="margin: 0 0 12px 0; color: #2d3748; font-size: 16px; font-weight: 600;">设备配置信息</h3>
+                        <div style="margin-bottom: 16px;">
+                            <span style="background: #e8f4f8; color: #4299e1; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                                ${data.extra_device_mark || '未知设备'}
+                            </span>
                         </div>
-                        
-                        <div class="config-section">
-                            <h4 style="margin: 0 0 12px 0; color: #4a5568; font-size: 14px;">功能状态</h4>
-                            <div class="status-grid">
-                                ${allFeatures.map(feature => `
-                                    <div class="status-item ${data[feature.key] ? 'active' : 'inactive'}">
-                                        <i class="${feature.icon}"></i>
-                                        <span>${feature.label}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
+
+                        <h4 style="margin: 0 0 12px 0; color: #4a5568; font-size: 14px;">功能状态</h4>
+                        <div class="status-grid" style="margin-bottom: 20px;">
+                            ${allFeatures.map(feature => `
+                                <div class="status-item ${data[feature.key] ? 'active' : 'inactive'}">
+                                    <i class="${feature.icon}"></i>
+                                    <span>${feature.label}</span>
+                                </div>
+                            `).join('')}
                         </div>
-                        
-                        <div class="config-section">
-                            <h4 style="margin: 0 0 12px 0; color: #4a5568; font-size: 14px;">SIM卡信息</h4>
-                            <div class="sim-cards">
-                                ${Object.values(data.sim_info_list || {}).map(sim => `
-                                    <div class="sim-card">
-                                        <div class="sim-header">
-                                            <i class="fas fa-sim-card"></i>
-                                            <span>${sim.carrier_name || '未知运营商'}</span>
-                                        </div>
-                                        <div class="sim-number">${sim.number || '未知号码'}</div>
-                                        <div class="sim-icc">ICCID: ${sim.icc_id || '未知'}</div>
+
+                        <h4 style="margin: 0 0 12px 0; color: #4a5568; font-size: 14px;">SIM卡信息</h4>
+                        <div style="display: grid; gap: 12px;">
+                            ${Object.values(data.sim_info_list || {}).map(sim => `
+                                <div style="background: #f8f8f8; border-radius: 8px; padding: 12px; border-left: 4px solid #4299e1;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                        <i class="fas fa-sim-card" style="color: #4299e1;"></i>
+                                        <span style="font-weight: 600; color: #2d3748;">${sim.carrier_name || '未知运营商'}</span>
                                     </div>
-                                `).join('')}
-                            </div>
+                                    <div style="font-size: 14px; color: #4a5568; margin-bottom: 4px;">${sim.number || '未知号码'}</div>
+                                    <div style="font-size: 12px; color: #718096;">ICCID: ${sim.icc_id || '未知'}</div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `;
@@ -1115,43 +1490,43 @@
             if (endpoint === '/battery/query') {
                 const batteryLevel = parseInt(data.level) || 0;
                 const batteryColor = batteryLevel > 70 ? '#48bb78' : batteryLevel > 30 ? '#f7941d' : '#e53e3e';
-                
+
                 const html = `
-                    <div class="battery-card">
-                        <div class="battery-header">
-                            <h3 style="margin: 0 0 15px 0; color: #2d3748;">电池信息</h3>
-                        </div>
-                        
-                        <div class="battery-level">
-                            <div class="battery-progress">
-                                <div class="battery-fill" style="width: ${batteryLevel}%; background: ${batteryColor};"></div>
-                                <div class="battery-text">${batteryLevel}%</div>
+                    <div style="padding: 16px;">
+                        <h3 style="margin: 0 0 16px 0; color: #2d3748; font-size: 16px; font-weight: 600;">电池信息</h3>
+
+                        <div style="margin-bottom: 20px;">
+                            <div style="position: relative; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden;">
+                                <div style="height: 100%; width: ${batteryLevel}%; background: ${batteryColor}; border-radius: 15px; transition: width 0.5s ease;"></div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 600; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); font-size: 14px;">
+                                    ${batteryLevel}%
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="battery-details">
-                            <div class="detail-item">
-                                <span class="detail-label">状态:</span>
-                                <span class="detail-value">${data.status || '未知'}</span>
+
+                        <div style="display: grid; gap: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="color: #718096; font-size: 14px;">状态</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.status || '未知'}</span>
                             </div>
-                            <div class="detail-item">
-                                <span class="detail-label">健康度:</span>
-                                <span class="detail-value">${data.health || '未知'}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="color: #718096; font-size: 14px;">健康度</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.health || '未知'}</span>
                             </div>
-                            <div class="detail-item">
-                                <span class="detail-label">充电器:</span>
-                                <span class="detail-value">${data.plugged || '未知'}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="color: #718096; font-size: 14px;">充电器</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.plugged || '未知'}</span>
                             </div>
                             ${data.temperature ? `
-                            <div class="detail-item">
-                                <span class="detail-label">温度:</span>
-                                <span class="detail-value">${data.temperature}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="color: #718096; font-size: 14px;">温度</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.temperature}</span>
                             </div>
                             ` : ''}
                             ${data.voltage ? `
-                            <div class="detail-item">
-                                <span class="detail-label">电压:</span>
-                                <span class="detail-value">${data.voltage}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+                                <span style="color: #718096; font-size: 14px;">电压</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.voltage}</span>
                             </div>
                             ` : ''}
                         </div>
@@ -1165,48 +1540,46 @@
             if (endpoint === '/location/query') {
                 const latitude = data.latitude || '';
                 const longitude = data.longitude || '';
-                
+
                 const html = `
-                    <div class="location-card">
-                        <div class="location-header">
-                            <h3 style="margin: 0 0 15px 0; color: #2d3748;">位置信息</h3>
-                        </div>
-                        
-                        <div class="location-details">
-                            <div class="detail-item">
+                    <div style="padding: 16px;">
+                        <h3 style="margin: 0 0 16px 0; color: #2d3748; font-size: 16px; font-weight: 600;">位置信息</h3>
+
+                        <div style="display: grid; gap: 0; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
                                 <i class="fas fa-map-marker-alt" style="color: #e53e3e;"></i>
-                                <span class="detail-value">${data.address || '未知地址'}</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">${data.address || '未知地址'}</span>
                             </div>
-                            <div class="detail-item">
+                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
                                 <i class="fas fa-globe" style="color: #4299e1;"></i>
-                                <span class="detail-value">纬度: ${latitude || '未知'}, 经度: ${longitude || '未知'}</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">纬度: ${latitude || '未知'}, 经度: ${longitude || '未知'}</span>
                             </div>
-                            <div class="detail-item">
+                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
                                 <i class="fas fa-clock" style="color: #718096;"></i>
-                                <span class="detail-value">更新时间: ${data.time || '未知'}</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">更新时间: ${data.time || '未知'}</span>
                             </div>
                             ${data.provider ? `
-                            <div class="detail-item">
+                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
                                 <i class="fas fa-satellite" style="color: #48bb78;"></i>
-                                <span class="detail-value">定位方式: ${data.provider}</span>
+                                <span style="color: #2d3748; font-weight: 600; font-size: 14px;">定位方式: ${data.provider}</span>
                             </div>
                             ` : ''}
                         </div>
-                        
+
                         ${latitude && longitude ? `
-                        <div class="map-links" style="margin-top: 20px;">
+                        <div style="margin-top: 20px;">
                             <h4 style="margin: 0 0 12px 0; color: #4a5568; font-size: 14px;">在地图中查看</h4>
-                            <div class="map-buttons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-                                <a href="https://maps.google.com/?q=${latitude},${longitude}" target="_blank" 
-                                   class="map-button" style="background: #4285f4; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                                <a href="https://maps.google.com/?q=${latitude},${longitude}" target="_blank"
+                                   style="background: #4285f4; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
                                     <i class="fas fa-map"></i> Google地图
                                 </a>
                                 <a href="https://api.map.baidu.com/marker?location=${latitude},${longitude}&title=当前位置&content=${encodeURIComponent(data.address || '')}&output=html" target="_blank"
-                                   class="map-button" style="background: #2932e1; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
+                                   style="background: #2932e1; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
                                     <i class="fas fa-map"></i> 百度地图
                                 </a>
                                 <a href="https://uri.amap.com/marker?position=${longitude},${latitude}&name=当前位置" target="_blank"
-                                   class="map-button" style="background: #0091ff; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
+                                   style="background: #0091ff; color: white; padding: 10px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px;">
                                     <i class="fas fa-map"></i> 高德地图
                                 </a>
                             </div>
@@ -1224,24 +1597,24 @@
                     responseElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #718096;">没有找到联系人</div>';
                     return;
                 }
-                
-                const html = data.map(contact => `
-                    <div class="contact-card">
-                        <div class="contact-header">
+
+                const html = data.map((contact, index) => `
+                    <div style="padding: 16px; ${index > 0 ? 'border-top: 1px solid #e2e8f0;' : ''}">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                             <i class="fas fa-user" style="color: #4299e1; font-size: 18px;"></i>
                             <span style="font-weight: 600; color: #2d3748;">${escapeHtml(contact.name || '未知联系人')}</span>
                         </div>
-                        <div class="contact-number">${escapeHtml(contact.phone_number)}</div>
-                        <div class="contact-actions">
-                            <span class="record-action" onclick="sendSMS('${escapeHtml(contact.phone_number)}')">发送短信</span>
-                            <span class="record-action" onclick="callNumber('${escapeHtml(contact.phone_number)}')">拨打电话</span>
+                        <div style="font-size: 14px; color: #4a5568; margin-bottom: 10px;">${escapeHtml(contact.phone_number)}</div>
+                        <div style="display: flex; gap: 15px;">
+                            <span style="color: #4299e1; font-weight: 600; cursor: pointer; font-size: 12px;" onclick="sendSMS('${escapeHtml(contact.phone_number)}')">发送短信</span>
+                            <span style="color: #4299e1; font-weight: 600; cursor: pointer; font-size: 12px;" onclick="callNumber('${escapeHtml(contact.phone_number)}')">拨打电话</span>
                         </div>
                     </div>
                 `).join('');
                 responseElement.innerHTML = html;
                 return;
             }
-            
+
             // 默认JSON格式化
             responseElement.innerHTML = formatJson(data);
         }
