@@ -718,6 +718,8 @@
         }
     </style>
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CryptoJS 库，用于解决 crypto.subtle 兼容性问题 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
     <div class="main-container">
@@ -752,7 +754,7 @@
                     <input type="password" id="key" name="key" class="form-control" required>
                 </div>
                 <button type="button" id="loginButton" class="btn btn-primary" onclick="login()">登录</button>
-                <button type="button" class="btn" style="margin-top: 10px; background: #f8f8f8; color: #718096; font-size: 14px;" onclick="cancelManualLogin()" id="cancelLoginBtn" style="display: none;">取消</button>
+                <button type="button" class="btn" style="margin-top: 10px; background: #f8f8f8; color: #718096; font-size: 14px; display: none;" onclick="cancelManualLogin()" id="cancelLoginBtn">取消</button>
             </form>
             
             <!-- 功能区域 -->
@@ -766,7 +768,7 @@
                     </div>
                     <!-- 动态表单字段容器 -->
                     <div id="dynamicFields"></div>
-                    <button type="button" id="sendButton" class="btn btn-primary" onclick="sendRequest()">发送请求</button>
+                    <button type="button" id="sendButton" class="btn btn-primary" onclick="sendRequest(true)">发送请求</button>
                 </form>
                 
                 <!-- 响应结果区域 -->
@@ -877,12 +879,14 @@
 
             // 隐藏登录表单
             document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('cancelLoginBtn').style.display = 'none';
         }
 
         // 显示手动登录表单
         function showManualLogin() {
             document.getElementById('accountList').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('cancelLoginBtn').style.display = 'block';
             document.getElementById('url').value = '';
             document.getElementById('key').value = '';
         }
@@ -894,7 +898,16 @@
             } else {
                 document.getElementById('loginForm').style.display = 'block';
                 document.getElementById('accountList').style.display = 'none';
+                document.getElementById('cancelLoginBtn').style.display = 'none';
             }
+        }
+
+        // 生成签名 - 使用 CryptoJS 解决兼容性问题
+        async function generateSign(timestamp, key) {
+            const message = `${timestamp}\n${key}`;
+            const hash = CryptoJS.HmacSHA256(message, key);
+            const hashInBase64 = hash.toString(CryptoJS.enc.Base64);
+            return encodeURIComponent(hashInBase64);
         }
 
         // 登录函数
@@ -1659,7 +1672,8 @@
                 if (item.dataset.value === '/sms/send') {
                     item.click();
                     setTimeout(() => {
-                        document.getElementById('phone_numbers').value = number;
+                        const phoneInput = document.getElementById('phone_numbers');
+                        if (phoneInput) phoneInput.value = number;
                     }, 100);
                 }
             });
@@ -1671,7 +1685,8 @@
                 if (item.dataset.value === '/sms/send') {
                     item.click();
                     setTimeout(() => {
-                        document.getElementById('phone_numbers').value = number;
+                        const phoneInput = document.getElementById('phone_numbers');
+                        if (phoneInput) phoneInput.value = number;
                     }, 100);
                 }
             });
@@ -1680,16 +1695,6 @@
         // 拨打电话
         function callNumber(number) {
             alert(`拨打电话功能: ${number}\n\n注意: 此功能需要设备支持电话拨号功能。`);
-        }
-        
-        // 生成签名
-        async function generateSign(timestamp, key) {
-            const message = `${timestamp}\n${key}`;
-            const enc = new TextEncoder();
-            const keyData = enc.encode(key);
-            const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-            const signature = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(message));
-            return encodeURIComponent(btoa(String.fromCharCode(...new Uint8Array(signature))));
         }
         
         // HTML转义
